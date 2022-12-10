@@ -8,11 +8,12 @@ const POART = 5000;
 const server = http.createServer(app);
 const io = socketio(server);
 const {
-  joinUser,
+  userJoin,
   getCurrentUser,
   userLeave,
   getRoomUsers,
 } = require("./utils/db.js");
+
 // setting up frontend middware
 app.use(express.static(path.join(__dirname, "view")));
 
@@ -23,7 +24,7 @@ app.use(express.static(path.join(__dirname, "view")));
 // run when clients connects
 io.on("connect", (socket) => {
   socket.on("joinRoom", ({ username, room }) => {
-    const user = joinUser(socket.id, username, room);
+    const user = userJoin(socket.id, username, room);
     socket.join(user.room);
 
     //sending msg to single client
@@ -36,6 +37,17 @@ io.on("connect", (socket) => {
       .to(user.room)
       .emit("msg", msgFormater("Bot", `${user.userName} joined`));
 
+    // send user and room info
+    io.to(user.room).emit("roomUsers", {
+      room: user.room,
+      users: getRoomUsers(user.room),
+    });
+    //listening for  chatMsg event that will be  send from client
+    socket.on("chatMsg", (msg) => {
+      const user = getCurrentUser(socket.id);
+      io.to(user.room).emit("msg", msgFormater(user.userName, msg));
+    });
+  });
     socket.on("disconnect", () => {
       const user = userLeave(socket.id);
       if (user) {
@@ -43,16 +55,16 @@ io.on("connect", (socket) => {
           "msg",
           msgFormater("Bot", `${user.userName} Left`)
         );
+        // send user and room info
+        io.to(user.room).emit("roomUsers", {
+          room: user.room,
+          users: getRoomUsers(user.room),
+        });
       }
     });
   }); // <-End of joinRoom event function
 
-  //listening for  chatMsg event that will be  send from client
-  socket.on("chatMsg", (msg) => {
-    const user = getCurrentUser(socket.id);
-    io.to(user.room).emit("msg", msgFormater(user.userName, msg));
-  });
-});
+  
 
 server.listen(POART, () => {
   console.log(`http://localhost:${POART}`);
