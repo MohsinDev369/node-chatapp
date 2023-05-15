@@ -1,5 +1,5 @@
-# node-chatapp
-Just a chat app created with node backend and websockets. 
+# Node chat app
+Just a chat app created with node backend and WebSockets. -completed-
 # Preview
 ![](preview.png)    
 
